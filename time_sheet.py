@@ -5,9 +5,10 @@ import datetime
 import random
 from ics import Calendar
 import requests
+import numpy as np
 
-MONTHS = {'Styczeń': 1, 'Luty': 2, 'Marzec': 3, 'Kwiecień': 4, 'Maj': 5, 'Czerwiec': 6, 'Lipiec': 7, 'Sierpień': 8,
-          'Wrzesień': 9, 'Październik': 10, 'Listopad': 11, 'Grudzień': 12}
+MONTHS = {1: 'Styczeń', 2: 'Luty', 3: 'Marzec', 4: 'Kwiecień', 5: 'Maj', 6: 'Czerwiec', 7: 'Lipiec', 8: 'Sierpień',
+          9: 'Wrzesień', 10: 'Październik', 11: 'Listopad', 12: 'Grudzień'}
 
 calendar_url = 'https://www.officeholidays.com/ics-clean/poland'
 
@@ -47,7 +48,7 @@ def list_sum(my_list):
 def main():
     # Create a workbook and add a worksheet.
     workbook = xlsxwriter.Workbook(
-        f'{settings.employee} - EWIDENCJA CZASU PRACY - {settings.year}.{MONTHS[settings.month.capitalize()]} {settings.month.capitalize()}.xlsx')
+        f'{settings.employee} - EWIDENCJA CZASU PRACY - {settings.year}.{str(settings.month)} {MONTHS[settings.month]}.xlsx')
     worksheet = workbook.add_worksheet()
 
     worksheet.set_column('A:F', 12)
@@ -107,7 +108,7 @@ def main():
     worksheet.merge_range('A2:A5', 'Osoba:', merge_format)
     worksheet.merge_range('B2:C5', settings.employee, merge_format)
     worksheet.merge_range('D2:D3', 'Miesiąc:', merge_format)
-    worksheet.merge_range('E2:F3', settings.month.capitalize(), merge_format)
+    worksheet.merge_range('E2:F3', MONTHS[settings.month], merge_format)
     worksheet.merge_range('D4:D5', 'Rok:', merge_format)
     worksheet.merge_range('E4:F5', settings.year, merge_format)
 
@@ -134,13 +135,22 @@ def main():
     worksheet.write('F6', 'Uwagi', headers_format)
 
     c = calendar.TextCalendar(calendar.MONDAY)
-    holidays_list = holidays(calendar_url, settings.year, MONTHS[settings.month.capitalize()])
+    holidays_list = holidays(calendar_url, settings.year, settings.month)
+
+    if settings.month == 12:
+        start = datetime.date(settings.year, settings.month, 1)
+        end = datetime.date(settings.year + 1, 1, 1)
+    else:
+        start = datetime.date(settings.year, settings.month, 1)
+        end = datetime.date(settings.year, settings.month + 1, 1)
+
+    working_days = np.busday_count(start, end, holidays=holidays_list)
+    total_working_hours = working_days * 8
 
     suma = 0
     while True:
-        if suma != settings.total_working_hours:
-            md = my_random(settings.total_working_hours, settings.min_hours,
-                           settings.max_hours)
+        if suma != total_working_hours:
+            md = my_random(total_working_hours, settings.min_hours, settings.max_hours)
             suma = list_sum(md)
         else:
             break
@@ -148,12 +158,11 @@ def main():
     working_days = 0
     counter = 7
 
-    for day in c.itermonthdays(settings.year, MONTHS[settings.month.capitalize()]):
+    for day in c.itermonthdays(settings.year, settings.month):
         if day != 0:
 
-            weekday = calendar.weekday(settings.year, MONTHS[settings.month.capitalize()], int(day))
-            date_time = datetime.datetime.strptime(f'{settings.year}-{MONTHS[settings.month.capitalize()]}-{day}',
-                                                   '%Y-%m-%d')
+            weekday = calendar.weekday(settings.year, settings.month, int(day))
+            date_time = datetime.datetime.strptime(f'{settings.year}-{settings.month}-{day}', '%Y-%m-%d')
 
             if weekday == 5 or weekday == 6 or str(date_time)[:10] in holidays_list:
                 worksheet.write_datetime(f'A{counter}', date_time, weekend_date_format)
@@ -174,7 +183,7 @@ def main():
                 working_days += 1
 
     sum_formula = '{=SUM(C7:C' + str(counter - 1) + ')}'
-    remain_formula = '{=(C' + str(counter) + '-' + str(settings.total_working_hours) + ')}'
+    remain_formula = '{=(C' + str(counter) + '-' + str(total_working_hours) + ')}'
 
     worksheet.write_blank(f'A{counter}', None, center)
     worksheet.write_blank(f'B{counter}', None, center)
