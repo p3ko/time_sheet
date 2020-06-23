@@ -47,11 +47,21 @@ def list_sum(my_list):
 
 def main():
     # Create a workbook and add a worksheet.
-    workbook = xlsxwriter.Workbook(
-        f'{settings.employee} - EWIDENCJA CZASU PRACY - {settings.year}.{str(settings.month)} {MONTHS[settings.month]}.xlsx')
+    if settings.month < 10:
+        workbook = xlsxwriter.Workbook(f'{settings.employee} - EWIDENCJA CZASU PRACY - {settings.year}.0'
+                                       f'{str(settings.month)} {MONTHS[settings.month]}.xlsx')
+    else:
+        workbook = xlsxwriter.Workbook(f'{settings.employee} - EWIDENCJA CZASU PRACY - {settings.year}.'
+                                       f'{str(settings.month)} {MONTHS[settings.month]}.xlsx')
+
     worksheet = workbook.add_worksheet()
 
-    worksheet.set_column('A:F', 12)
+    worksheet.set_column('A:A', 12)
+    worksheet.set_column('B:B', 12)
+    worksheet.set_column('C:C', 12)
+    worksheet.set_column('D:D', 12)
+    worksheet.set_column('E:E', 12)
+    worksheet.set_column('F:F', 12)
 
     merge_format_bold = workbook.add_format({
         'bold': 1,
@@ -172,6 +182,16 @@ def main():
                 worksheet.write_blank(f'E{counter}', None, weekend_format)
                 worksheet.write_blank(f'F{counter}', None, weekend_format)
                 counter += 1
+            elif str(date_time)[:-9] in settings.leave:
+                worksheet.set_column('B:B', 35)
+                worksheet.write_datetime(f'A{counter}', date_time, date_format)
+                worksheet.write_string(f'B{counter}', 'Przygotowywanie materiałów szkoleniowych', center)
+                worksheet.write_number(f'C{counter}', md[working_days], center)
+                worksheet.write_blank(f'D{counter}', None, center)
+                worksheet.write_blank(f'E{counter}', None, center)
+                worksheet.write_blank(f'F{counter}', None, center)
+                counter += 1
+                working_days += 1
             else:
                 worksheet.write_datetime(f'A{counter}', date_time, date_format)
                 worksheet.write_string(f'B{counter}', settings.project, center)
